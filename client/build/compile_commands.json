@@ -1,0 +1,8 @@
+[
+{
+  "directory": "/home/wiciu/wisielec/client/build",
+  "command": "/usr/bin/g++   -g -std=gnu++17 -Wall -Wextra -o CMakeFiles/client.dir/main.cpp.o -c /home/wiciu/wisielec/client/main.cpp",
+  "file": "/home/wiciu/wisielec/client/main.cpp",
+  "output": "CMakeFiles/client.dir/main.cpp.o"
+}
+]

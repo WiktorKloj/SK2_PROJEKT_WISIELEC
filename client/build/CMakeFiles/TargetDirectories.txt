@@ -1,0 +1,3 @@
+/home/wiciu/wisielec/client/build/CMakeFiles/client.dir
+/home/wiciu/wisielec/client/build/CMakeFiles/edit_cache.dir
+/home/wiciu/wisielec/client/build/CMakeFiles/rebuild_cache.dir
