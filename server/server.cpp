@@ -147,7 +147,7 @@ void removePlayerFromRoom(int fd) {
             for(int mfd : r.members) sendTo(mfd, "Gracz " + p.nick + " opuścił pokój.");
         }
 
-        // Zerowanie punktów gracza po wyjściu (wymóg)
+        // Zerowanie punktów gracza po wyjściu
         p.score = 0;
         p.roomName = "";
 
