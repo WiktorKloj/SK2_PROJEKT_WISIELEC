@@ -2,7 +2,14 @@
 #include <sys/types.h>
 #include <sys/epoll.h>
 #include <netdb.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/epoll.h>
+#include <netdb.h>
 #include <unistd.h>
+#include <errno.h>
+#include <cstdio>
+#include <cstdlib>
 #include <errno.h>
 #include <cstdio>
 #include <cstdlib>
