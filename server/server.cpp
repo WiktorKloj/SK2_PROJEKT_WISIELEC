@@ -3,8 +3,8 @@
 #include <sys/epoll.h>
 #include <netdb.h>
 #include <unistd.h>
-#include <cstdio>
 #include <errno.h>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <string>
@@ -19,9 +19,9 @@
 using namespace std;
 
 #define MAX_EVENTS 32
-#define MAX_PLAYERS_IN_ROOM 8 // Ile graczy może max znaleźć się w jednym pokoju
+#define MAX_PLAYERS_IN_ROOM 8
 #define MAX_ERRORS 7 // Ile części wisielca (głowa, tułów, ręce, nogi...)
-#define ROUND_TIME_SEC 120 // Czas trwania jednej rundy
+#define ROUND_TIME_SEC 120 
 
 
 struct Player {
@@ -106,9 +106,7 @@ void startRound(GameRoom &r) {
     }
     
     broadcast(r, "--- ROZPOCZYNAMY NOWĄ RUNDĘ! ---");
-    for(int fd : r.members) {
-        sendTo(fd, getGameStatus(r, fd));
-    }
+    broadcast(r, getGameStatus(r));
     broadcast(r, "Wpisz literę, aby zgadywać (np. 'A')");
 }
 
@@ -121,7 +119,7 @@ void endRound(GameRoom &r, string reason) {
     // Sprawdź warunki kontynuacji
     if(r.members.size() >= 2) {
         broadcast(r, "Za 3 sekundy nowa runda...");
-        sleep(3); 
+        sleep(1); 
         startRound(r);
     } else {
         broadcast(r, "Oczekiwanie na graczy (min. 2)...");
@@ -305,7 +303,7 @@ void handleCommand(int fd, string cmdLine) {
                 broadcast(r, "GRACZ " + p.nick + " ZGADŁ HASŁO! (+1 PKT)");
                 endRound(r, "Hasło odgadnięte.");
             } else {
-                // Odśwież widok
+                // Odśwież widok wszystkim
                 for(int mfd : r.members) sendTo(mfd, getGameStatus(r, mfd));
             }
         } else {
