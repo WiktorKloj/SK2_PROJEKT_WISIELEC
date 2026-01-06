@@ -1,52 +1,69 @@
+#include <sys/socket.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 #include <unistd.h>
+#include <sys/epoll.h>
+#include <errno.h>
+#include <error.h>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <string>
 #include <iostream>
 
 using namespace std;
 
-string make_packet(const string& payload)
-{
-    uint32_t len=htonl(payload.size());
-    string out;
-    out.append(reinterpret_cast<char*>(&len),4);
-    out.append(payload);
-    return out;
-}
+int main(int argc, char ** argv){
+    if(argc != 3) error(1, 0, "Użycie: ./client <ip> <port>");
 
-int main(int argc, char* argv[])
-{
-    if(argc!=3)
-    {
-        cerr<<"Poprawne Użycie: client <ip> <port>\n";
-        return 1;
-    }
-    int fd=socket(AF_INET,SOCK_STREAM,0);
-    sockaddr_in addr{};
-    addr.sin_family=AF_INET;
-    addr.sin_port=htons(std::atoi(argv[2]));
-    inet_pton(AF_INET,argv[1], &addr.sin_addr);
-    if(connect(fd, (sockaddr*)&addr, sizeof(addr))<0)
-    {
-        perror("Błąd połączenia");
-        return 1;
-    }
-    string line;
-    while (getline(cin,line))
-    {
-        string pkt=make_packet(line);
-        send(fd,pkt.data(),pkt.size(),0);
-        char buf[4096];
-        ssize_t n=recv(fd,buf,sizeof(buf),0);
-        if(n<=0)
-        {
+    addrinfo hints{.ai_family = AF_INET, .ai_socktype = SOCK_STREAM};
+    addrinfo *res;
+
+    if(getaddrinfo(argv[1], argv[2], &hints, &res) != 0) error(1, errno, "getaddrinfo");
+
+    int fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+    if(connect(fd, res->ai_addr, res->ai_addrlen) == -1) error(1, errno, "connect");
+
+    freeaddrinfo(res);
+
+    int epollfd = epoll_create1(0);
+    epoll_event ee;
+    
+    ee.events = EPOLLIN;
+    ee.data.fd = STDIN_FILENO;
+    epoll_ctl(epollfd, EPOLL_CTL_ADD, STDIN_FILENO, &ee);
+    
+    ee.events = EPOLLIN | EPOLLRDHUP;
+    ee.data.fd = fd;
+    epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &ee);
+
+    char buff[512];
+
+    while(1){
+        int ile = epoll_wait(epollfd, &ee, 1, -1);
+        if (ile == -1) error(1, errno, "epoll error");
+
+        if (ee.events & (EPOLLRDHUP|EPOLLHUP|EPOLLERR)){
+            printf("Serwer rozłączył połączenie.\n");
+            close(fd);
             break;
         }
-        uint32_t len;
-        memcpy(&len, buf,4);
-        len=ntohl(len);
-        string msg(buf+4,len);
-        cout<<msg<<"\n";
+
+        if(ee.events & EPOLLIN){
+            if(ee.data.fd == STDIN_FILENO){
+                ssize_t received = read(STDIN_FILENO, buff, sizeof(buff)-1);
+                if(received > 0) {
+                     write(fd, buff, received);
+                }
+            }
+            else if (ee.data.fd == fd) {
+                ssize_t received = read(fd, buff, sizeof(buff)-1);
+                if (received > 0) {
+                    buff[received] = 0;
+                    printf("%s", buff); 
+                }
+            }
+        }
     }
-    close(fd);
+    return 0;
 }
