@@ -41,6 +41,7 @@ struct GameRoom {
     string maskedPw;     // Stan widoczny (np. "_ I _ I _ _ _ _")
     bool gameActive;
     struct timespec startTime; // Czas monotoniczny startu rundy
+    int roundNum = 0; // Liczba rund gry w pokoju
 };
 
 
@@ -79,6 +80,7 @@ string getGameStatus(GameRoom &r, int viewerFd = -1) {
     stringstream ss;
     ss << "\n--- POKÓJ: " << r.name << " ---\n";
     ss << "HASŁO: " << r.maskedPw << "\n";
+    ss << "RUNDA: " << r.roundNum << "\n";
     ss << "CZAS: " << (int)timeDiff(r.startTime, getMonotonicTime()) << "s / " << ROUND_TIME_SEC << "s\n";
     ss << "TABELA WYNIKÓW:\n";
     for(int fd : r.members) {
@@ -96,9 +98,10 @@ void startRound(GameRoom &r) {
     r.gameActive = true;
     r.password = DICTIONARY[rand() % DICTIONARY.size()];
     r.maskedPw = string(r.password.length(), '_');
+    r.roundNum++;
     r.startTime = getMonotonicTime();
 
-    // Resetuj stan graczy na nową rundę
+    // Resetuje stan graczy na nową rundę
     for(int fd : r.members) {
         players[fd].roundErrors = 0;
         players[fd].usedChars = "";
@@ -118,7 +121,7 @@ void endRound(GameRoom &r, string reason) {
     broadcast(r, "Powód: " + reason);
     broadcast(r, "Prawidłowe hasło: " + r.password);
     
-    // Sprawdź warunki kontynuacji
+    // Sprawda warunki kontynuacji
     if(r.members.size() >= 2) {
         broadcast(r, "Za 3 sekundy nowa runda...");
         sleep(3); 
@@ -158,6 +161,7 @@ void removePlayerFromRoom(int fd) {
             rooms.erase(r.name);
         } else if (r.members.size() < 2 && r.gameActive) {
             r.gameActive = false;
+            r.roundNum = 0;
             broadcast(r, "Za mało graczy, gra wstrzymana.");
         }
     }
@@ -180,10 +184,10 @@ void handleCommand(int fd, string cmdLine) {
     // 1. Ustawianie Nicku (Wymagane na początku)
     if (p.nick.empty()) {
         if (cmd == "NICK") {
-            if(arg.empty()) { sendTo(fd, "ERR Musisz podać nick!"); return; }
+            if(arg.empty()) { sendTo(fd, "Musisz podać nick!"); return; }
             // Sprawdź unikalność
             for(auto const& [k, v] : players) {
-                if(v.nick == arg) { sendTo(fd, "ERR Nick zajęty!"); return; }
+                if(v.nick == arg) { sendTo(fd, "Nick zajęty!"); return; }
             }
             p.nick = arg;
             sendTo(fd, "OK Witaj " + p.nick);
@@ -303,6 +307,7 @@ void handleCommand(int fd, string cmdLine) {
             if (completed) {
                 p.score++;
                 broadcast(r, "GRACZ " + p.nick + " ZGADŁ HASŁO! (+1 PKT)");
+                for(int mfd : r.members) sendTo(mfd, getGameStatus(r, mfd));
                 endRound(r, "Hasło odgadnięte.");
             } else {
                 // Odśwież widok
@@ -339,7 +344,9 @@ int main(int argc, char ** argv) {
     }
 
     // 1. Inicjalizacja Gniazda
-    addrinfo hints{.ai_family = AF_INET, .ai_socktype = SOCK_STREAM};
+    addrinfo hints{};
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
     addrinfo *res;
     if(getaddrinfo(NULL, argv[1], &hints, &res) != 0) error(1, errno, "getaddrinfo");
 
