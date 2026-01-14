@@ -15,6 +15,7 @@
 #include <ctime>
 #include <sstream>
 #include <error.h>
+#include <fstream>
 
 using namespace std;
 
@@ -47,9 +48,30 @@ struct GameRoom {
 
 map<int, Player> players;
 map<string, GameRoom> rooms;
-const vector<string> DICTIONARY = {"KOMPUTER", "INTERNET", "PROGRAMOWANIE", "SERWER", "KLIENT", "PROTOKOL", "WISIELEC", "LINUX"};
+vector<string> DICTIONARY;
 
 
+void loadDictionary(string filename) {
+    ifstream file(filename);
+    if (!file.is_open()) {
+        fprintf(stderr, "Ostrzeżenie: Nie znaleziono pliku %s. Używam domyślnych słów.\n", filename.c_str());
+        DICTIONARY = {"KOMPUTER", "INTERNET", "PROGRAMOWANIE", "SERWER", "KLIENT", "PROTOKOL", "WISIELEC", "LINUX"};
+        return;
+    }
+
+    string word;
+    while (file >> word) {
+        transform(word.begin(), word.end(), word.begin(), ::toupper);
+        if(word.length() > 2) DICTIONARY.push_back(word);
+    }
+    file.close();
+
+    if(DICTIONARY.empty()) {
+        fprintf(stderr, "Błąd: Plik %s jest pusty!\n", filename.c_str());
+        exit(1);
+    }
+    printf("Załadowano %lu słów z pliku %s.\n", DICTIONARY.size(), filename.c_str());
+}
 
 // Pobiera aktualny czas monotoniczny
 struct timespec getMonotonicTime() {
@@ -139,6 +161,7 @@ bool checkAllEliminated(GameRoom &r) {
     return true;
 }
 
+// Wyjście gracza z pokoju
 void removePlayerFromRoom(int fd) {
     Player &p = players[fd];
     if(p.roomName.empty()) return;
@@ -342,6 +365,8 @@ int main(int argc, char ** argv) {
         fprintf(stderr, "Użycie: %s <port>\n", argv[0]);
         return 1;
     }
+
+    loadDictionary("slowa.txt");
 
     // 1. Inicjalizacja Gniazda
     addrinfo hints{};
