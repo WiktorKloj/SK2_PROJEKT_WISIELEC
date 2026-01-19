@@ -5,4 +5,4 @@ cmake --build build
 ```
 Aby uruchomić serwer należy wykonać polecenie: `./build/server/server <port>`
 
-Aby uruchomić klienta należy wykonać polecenie: `python3 build/client/client_gui.py`
+Aby uruchomić klienta należy wykonać polecenie: `python3 build/client/client_gui.py` albo `./build/client/client_gui.py`
