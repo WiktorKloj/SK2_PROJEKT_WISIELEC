@@ -1,8 +1,0 @@
-[
-{
-  "directory": "/root/sk2/SK2_PROJEKT_WISIELEC/build/server",
-  "command": "/usr/bin/g++   -g -std=gnu++17 -Wall -Wextra -o CMakeFiles/server.dir/server.cpp.o -c /root/sk2/SK2_PROJEKT_WISIELEC/server/server.cpp",
-  "file": "/root/sk2/SK2_PROJEKT_WISIELEC/server/server.cpp",
-  "output": "server/CMakeFiles/server.dir/server.cpp.o"
-}
-]
