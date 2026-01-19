@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Klient gry Wisielec oparty na bibliotece Tkinter.
 Obsługuje komunikację sieciową, logikę gry oraz interfejs graficzny.
