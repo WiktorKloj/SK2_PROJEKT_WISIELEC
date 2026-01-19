@@ -213,7 +213,7 @@ void handleCommand(int fd, string cmdLine) {
                 if(v.nick == arg) { sendTo(fd, "Nick zajęty!"); return; }
             }
             p.nick = arg;
-            sendTo(fd, "OK Witaj " + p.nick);
+            sendTo(fd, "OK Witaj " + p.nick + ".");
             sendTo(fd, "Komendy: LIST, CREATE <nazwa>, JOIN <nazwa>");
         } else {
             sendTo(fd, "Najpierw ustaw nick komendą: NICK <twoj_nick>");
@@ -230,8 +230,8 @@ void handleCommand(int fd, string cmdLine) {
             }
         }
         else if (cmd == "CREATE") {
-            if(arg.empty()) { sendTo(fd, "ERR Podaj nazwę pokoju"); return; }
-            if(rooms.count(arg)) { sendTo(fd, "ERR Pokój istnieje"); return; }
+            if(arg.empty()) { sendTo(fd, "ERR Podaj nazwę pokoju."); return; }
+            if(rooms.count(arg)) { sendTo(fd, "ERR Pokój istnieje."); return; }
             
             GameRoom newRoom;
             newRoom.name = arg;
@@ -242,9 +242,9 @@ void handleCommand(int fd, string cmdLine) {
             handleCommand(fd, "JOIN " + arg);
         }
         else if (cmd == "JOIN") {
-            if(!rooms.count(arg)) { sendTo(fd, "ERR Brak pokoju"); return; }
+            if(!rooms.count(arg)) { sendTo(fd, "ERR Brak pokoju."); return; }
             GameRoom &r = rooms[arg];
-            if(r.members.size() >= MAX_PLAYERS_IN_ROOM) { sendTo(fd, "ERR Pokój pełny"); return; }
+            if(r.members.size() >= MAX_PLAYERS_IN_ROOM) { sendTo(fd, "ERR Pokój pełny."); return; }
             
             p.roomName = arg;
             p.score = 0;
@@ -290,14 +290,14 @@ void handleCommand(int fd, string cmdLine) {
             if (cmd == "GUESS" && arg.length() == 1) {
                 cmdLine = arg;
             } else if (cmdLine.length() > 1 && cmd != "GUESS") {
-                 sendTo(fd, "Wpisuj pojedyncze litery.");
+                 sendTo(fd, "Wpisuj pojedyńcze litery, z angielskiego alfabetu.");
                  return;
             }
         }
         
         char guess = toupper(cmdLine[0]);
         if (guess < 'A' || guess > 'Z') {
-             sendTo(fd, "ERR Tylko litery A-Z");
+             sendTo(fd, "ERR Tylko litery A-Z.");
              return;
         }
 
@@ -328,12 +328,14 @@ void handleCommand(int fd, string cmdLine) {
         if (hit) {
             sendTo(fd, "TRAFIENIE!");
             if (completed) {
-                p.score++;
-                broadcast(r, "GRACZ " + p.nick + " ZGADŁ HASŁO! (+1 PKT)");
+                p.score+=3;
+                broadcast(r, "GRACZ " + p.nick + " ZGADŁ HASŁO! (+3 PKT)");
                 for(int mfd : r.members) sendTo(mfd, getGameStatus(r, mfd));
                 endRound(r, "Hasło odgadnięte.");
             } else {
                 // Odśwież widok
+                p.score++;
+                broadcast(r, "GRACZ " + p.nick + " TRAFIŁ LITERĘ " + guess + "! (+1 PKT)");
                 for(int mfd : r.members) sendTo(mfd, getGameStatus(r, mfd));
             }
         } else {
@@ -366,7 +368,7 @@ int main(int argc, char ** argv) {
         return 1;
     }
 
-    loadDictionary("slowa.txt");
+    loadDictionary("server/slowa.txt");
 
     // 1. Inicjalizacja Gniazda
     addrinfo hints{};

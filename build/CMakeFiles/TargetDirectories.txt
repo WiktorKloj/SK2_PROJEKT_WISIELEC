@@ -1,0 +1,9 @@
+/root/sk2/SK2_PROJEKT_WISIELEC/build/CMakeFiles/edit_cache.dir
+/root/sk2/SK2_PROJEKT_WISIELEC/build/CMakeFiles/rebuild_cache.dir
+/root/sk2/SK2_PROJEKT_WISIELEC/build/client/CMakeFiles/client.dir
+/root/sk2/SK2_PROJEKT_WISIELEC/build/client/CMakeFiles/lint_client.dir
+/root/sk2/SK2_PROJEKT_WISIELEC/build/client/CMakeFiles/edit_cache.dir
+/root/sk2/SK2_PROJEKT_WISIELEC/build/client/CMakeFiles/rebuild_cache.dir
+/root/sk2/SK2_PROJEKT_WISIELEC/build/server/CMakeFiles/server.dir
+/root/sk2/SK2_PROJEKT_WISIELEC/build/server/CMakeFiles/edit_cache.dir
+/root/sk2/SK2_PROJEKT_WISIELEC/build/server/CMakeFiles/rebuild_cache.dir
