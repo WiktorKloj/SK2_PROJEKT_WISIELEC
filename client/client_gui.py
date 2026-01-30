@@ -23,9 +23,8 @@ class HangmanClient:
     def __init__(self, master):
         """Inicjalizacja okna i zmiennych stanu."""
         self.root = master
-        self.root.title(" Gra Wisielec")
+        self.root.title("Gra Wisielec")
         self.root.geometry("1200x800")
-        self.app_alive = True
 
         self.client_socket = None
         self.connected = False
@@ -59,7 +58,6 @@ class HangmanClient:
         self.lbl_word = None
         self.canvas = None
         self.right_frame = None
-        self.default_button_bg = None
 
         # Budowanie interfejsu
         self._setup_gui()
@@ -75,7 +73,9 @@ class HangmanClient:
         left_frame = tk.Frame(main_frame)
         left_frame.pack(side='left', fill='both', expand=True)
 
-        self.right_frame = tk.Frame(main_frame, bg="white", bd=2, relief="sunken")
+        self.right_frame = tk.Frame(
+            main_frame, bg="white", bd=2, relief="sunken"
+        )
 
         self._create_connection_panel(left_frame)
         self._create_lobby_panel(left_frame)
@@ -108,7 +108,7 @@ class HangmanClient:
 
         self.btn_disconnect = tk.Button(
             conn_frame, text="Rozłącz",
-            command=lambda: self.disconnect_from_server(show_message=False),
+            command=self.disconnect_from_server,
             bg="#F44336", fg="white", state="disabled"
         )
         self.btn_disconnect.pack(side='left', padx=10)
@@ -123,16 +123,16 @@ class HangmanClient:
         )
         self.btn_nick.pack(side='left', padx=5)
 
-        if self.default_button_bg is None:
-            self.default_button_bg = self.btn_nick.cget("bg")
-
         self.btn_list = tk.Button(
             ctrl_frame, text="Lista Pokoi", command=self.action_list, width=12
         )
         self.btn_list.pack(side='left', padx=5)
 
         self.btn_create = tk.Button(
-            ctrl_frame, text="Stwórz Pokój", command=self.action_create, width=12
+            ctrl_frame,
+            text="Stwórz Pokój",
+            command=self.action_create,
+            width=12
         )
         self.btn_create.pack(side='left', padx=5)
 
@@ -180,7 +180,7 @@ class HangmanClient:
         self.btn_send.pack(side='left')
 
     def _create_game_panel(self):
-        """Tworzy prawy panel z grą (Wisielec,Runda, Czas, Hasło)."""
+        """Tworzy prawy panel z grą (Wisielec, Runda, Czas, Hasło)."""
         # 1. Info (Runda i Czas)
         info_frame = tk.Frame(self.right_frame, bg="white")
         info_frame.pack(fill='x', padx=10, pady=10)
@@ -198,7 +198,9 @@ class HangmanClient:
         self.lbl_time.pack(side='right', padx=10)
 
         # 2. HASŁO
-        word_frame = tk.Frame(self.right_frame, bg="#f0f0f0", bd=1, relief="solid")
+        word_frame = tk.Frame(
+            self.right_frame, bg="#f0f0f0", bd=1, relief="solid"
+        )
         word_frame.pack(fill='x', padx=20, pady=10)
 
         tk.Label(
@@ -224,18 +226,18 @@ class HangmanClient:
         self.canvas.pack(padx=20, pady=10)
         self._draw_hangman(0)
 
-    # ZEGA
+    # ZEGAR
 
     def _run_timer_loop(self):
         """Pętla aktualizująca lokalny licznik czasu."""
         if self.timer_running and self.connected:
             now = time.time()
             time_since_sync = now - self.last_sync_time
-            estimated_elapsed = self.last_server_elapsed + time_since_sync
-            if estimated_elapsed > self.max_round_time:
-                estimated_elapsed = self.max_round_time
+            est_elapsed = self.last_server_elapsed + time_since_sync
+            if est_elapsed > self.max_round_time:
+                est_elapsed = self.max_round_time
             self.lbl_time.config(
-                text=f"CZAS: {int(estimated_elapsed)}s / {self.max_round_time}s"
+                text=f"CZAS: {int(est_elapsed)}s / {self.max_round_time}s"
             )
         self.root.after(100, self._run_timer_loop)
 
@@ -257,16 +259,15 @@ class HangmanClient:
 
     def _disable_all_buttons(self):
         """Wyłącza wszystkie przyciski sterujące."""
-        state = "disabled"
         buttons = [
-            self.btn_nick, self.btn_list, self.btn_create,
-            self.btn_join, self.btn_leave
+            self.btn_nick,
+            self.btn_list,
+            self.btn_create,
+            self.btn_join,
+            self.btn_leave,
         ]
         for btn in buttons:
-            btn.config(state="disabled",
-                bg=self.default_button_bg,
-                fg="black"
-            )
+            btn.config(state="disabled")
 
     def _set_ui_connected_no_nick(self):
         """Ustawia UI po połączeniu, ale przed podaniem nicku."""
@@ -322,7 +323,7 @@ class HangmanClient:
         # 1. Analiza stanu gry
         self._parse_game_logic(raw_message)
 
-        # 2, Filtrowanie tekstu do wyświetlenia
+        # 2. Filtrowanie tekstu do wyświetlenia
         lines_to_show = []
 
         for line in raw_message.split('\n'):
@@ -370,7 +371,7 @@ class HangmanClient:
             self._set_ui_connected_no_nick()
         if "OK Witaj" in message:
             self._set_ui_lobby()
-        if any(x in message for x in ["Dołączono do", "Utworzono pokój", "Oczekiwanie na"]):
+        if any(x in message for x in ["Dołączono", "Utworzono", "Oczekiwanie"]):
             self._set_ui_room()
 
         # Wyjście z pokoju
@@ -484,7 +485,7 @@ class HangmanClient:
                 )
             self.canvas.create_text(
                 125 + off_x, 150 + off_y, text="PRZEGRANA",
-                fill="red", font=("Arial", 28, "bold"), angle=30
+                fill="red", font=("Arial", 28, "bold")
             )
 
     # KOMUNIKACJA
@@ -496,7 +497,7 @@ class HangmanClient:
         try:
             self.client_socket.send((cmd + "\n").encode('utf-8'))
         except (OSError, socket.error):
-            self.disconnect_from_server(show_message=True)
+            self.disconnect_from_server()
 
     def action_nick(self):
         """Obsługa przycisku zmiany nicku."""
@@ -510,7 +511,9 @@ class HangmanClient:
 
     def action_create(self):
         """Obsługa tworzenia pokoju."""
-        room = simpledialog.askstring("Stwórz Pokój", "Podaj nazwę nowego pokoju:")
+        room = simpledialog.askstring(
+            "Stwórz Pokój", "Podaj nazwę nowego pokoju:"
+        )
         if room:
             self._send_cmd(f"CREATE {room}")
 
@@ -544,7 +547,9 @@ class HangmanClient:
             messagebox.showerror("Błąd", "Port musi być liczbą!")
             return
         try:
-            self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.client_socket = socket.socket(
+                socket.AF_INET, socket.SOCK_STREAM
+            )
             self.client_socket.settimeout(3.0)
             self.client_socket.connect((ip_addr, port))
             self.client_socket.settimeout(None)
@@ -553,9 +558,11 @@ class HangmanClient:
             self.btn_disconnect.config(state="normal", bg="#F44336")
             threading.Thread(target=self.receive_loop, daemon=True).start()
         except (OSError, socket.error) as err:
-            messagebox.showerror("Błąd połączenia", f"Nie można połączyć:\n{err}")
+            messagebox.showerror(
+                "Błąd połączenia", f"Nie można połączyć:\n{err}"
+            )
 
-    def disconnect_from_server(self, show_message=True):
+    def disconnect_from_server(self):
         """Zamyka połączenie i czyści stan klienta."""
         if not self.connected:
             return
@@ -574,14 +581,6 @@ class HangmanClient:
         self._reset_info_labels()
         self.nick_set = False
         self._stop_timer()
-        if show_message and self.app_alive:
-            try:
-                messagebox.showwarning(
-                    "Połączenie zerwane",
-                    "Utracono połączenie z serwerem. \nSerwer mógł zostać wyłączony."
-                    )
-            except tk.TclError:
-                pass
 
     def receive_loop(self):
         """Wątek odbierający wiadomości od serwera."""
@@ -595,12 +594,11 @@ class HangmanClient:
             except (OSError, socket.error):
                 break
         if self.connected:
-            self.root.after(0, lambda: self.disconnect_from_server(show_message=True))
+            self.root.after(0, self.disconnect_from_server)
 
     def on_closing(self):
         """Obsługa zamknięcia okna."""
-        self.app_alive = False
-        self.disconnect_from_server(show_message=False)
+        self.disconnect_from_server()
         self.root.destroy()
         sys.exit(0)
 
