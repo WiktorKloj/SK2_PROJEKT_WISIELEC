@@ -25,6 +25,7 @@ class HangmanClient:
         self.root = master
         self.root.title(" Gra Wisielec")
         self.root.geometry("1200x800")
+        self.app_alive = True
 
         self.client_socket = None
         self.connected = False
@@ -58,6 +59,7 @@ class HangmanClient:
         self.lbl_word = None
         self.canvas = None
         self.right_frame = None
+        self.default_button_bg = None
 
         # Budowanie interfejsu
         self._setup_gui()
@@ -106,7 +108,7 @@ class HangmanClient:
 
         self.btn_disconnect = tk.Button(
             conn_frame, text="Rozłącz",
-            command=self.disconnect_from_server,
+            command=lambda: self.disconnect_from_server(show_message=False),
             bg="#F44336", fg="white", state="disabled"
         )
         self.btn_disconnect.pack(side='left', padx=10)
@@ -120,6 +122,9 @@ class HangmanClient:
             ctrl_frame, text="Ustaw Nick", command=self.action_nick, width=12
         )
         self.btn_nick.pack(side='left', padx=5)
+
+        if self.default_button_bg is None:
+            self.default_button_bg = self.btn_nick.cget("bg")
 
         self.btn_list = tk.Button(
             ctrl_frame, text="Lista Pokoi", command=self.action_list, width=12
@@ -258,7 +263,10 @@ class HangmanClient:
             self.btn_join, self.btn_leave
         ]
         for btn in buttons:
-            btn.config(state=state)
+            btn.config(state="disabled",
+                bg=self.default_button_bg,
+                fg="black"
+            )
 
     def _set_ui_connected_no_nick(self):
         """Ustawia UI po połączeniu, ale przed podaniem nicku."""
@@ -488,7 +496,7 @@ class HangmanClient:
         try:
             self.client_socket.send((cmd + "\n").encode('utf-8'))
         except (OSError, socket.error):
-            self.disconnect_from_server()
+            self.disconnect_from_server(show_message=True)
 
     def action_nick(self):
         """Obsługa przycisku zmiany nicku."""
@@ -547,7 +555,7 @@ class HangmanClient:
         except (OSError, socket.error) as err:
             messagebox.showerror("Błąd połączenia", f"Nie można połączyć:\n{err}")
 
-    def disconnect_from_server(self):
+    def disconnect_from_server(self, show_message=True):
         """Zamyka połączenie i czyści stan klienta."""
         if not self.connected:
             return
@@ -566,6 +574,14 @@ class HangmanClient:
         self._reset_info_labels()
         self.nick_set = False
         self._stop_timer()
+        if show_message and self.app_alive:
+            try:
+                messagebox.showwarning(
+                    "Połączenie zerwane",
+                    "Utracono połączenie z serwerem. \nSerwer mógł zostać wyłączony."
+                    )
+            except tk.TclError:
+                pass
 
     def receive_loop(self):
         """Wątek odbierający wiadomości od serwera."""
@@ -579,11 +595,12 @@ class HangmanClient:
             except (OSError, socket.error):
                 break
         if self.connected:
-            self.root.after(0, self.disconnect_from_server)
+            self.root.after(0, lambda: self.disconnect_from_server(show_message=True))
 
     def on_closing(self):
         """Obsługa zamknięcia okna."""
-        self.disconnect_from_server()
+        self.app_alive = False
+        self.disconnect_from_server(show_message=False)
         self.root.destroy()
         sys.exit(0)
 

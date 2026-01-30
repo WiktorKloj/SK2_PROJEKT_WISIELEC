@@ -43,6 +43,7 @@ struct GameRoom {
     bool gameActive;
     struct timespec startTime; // Czas monotoniczny startu rundy
     int roundNum = 0; // Liczba rund gry w pokoju
+    time_t cooldownEnd = 0;
 };
 
 
@@ -118,6 +119,7 @@ string getGameStatus(GameRoom &r, int viewerFd = -1) {
 
 void startRound(GameRoom &r) {
     r.gameActive = true;
+    r.cooldownEnd = 0;
     r.password = DICTIONARY[rand() % DICTIONARY.size()];
     r.maskedPw = string(r.password.length(), '_');
     r.roundNum++;
@@ -146,10 +148,10 @@ void endRound(GameRoom &r, string reason) {
     // Sprawda warunki kontynuacji
     if(r.members.size() >= 2) {
         broadcast(r, "Za 3 sekundy nowa runda...");
-        sleep(3); 
-        startRound(r);
+        r.cooldownEnd = time(NULL) + 3;
     } else {
         broadcast(r, "Oczekiwanie na graczy (min. 2)...");
+        r.cooldownEnd = 0;
     }
 }
 
@@ -183,8 +185,17 @@ void removePlayerFromRoom(int fd) {
         if(r.members.empty()) {
             rooms.erase(r.name);
         } else if (r.members.size() < 2 && r.gameActive) {
+            if (!r.members.empty()) {
+                int winnerFd = r.members[0];
+                Player &winner = players[winnerFd];
+                
+                string msg = "Koniec gry (przeciwnik uciekł)! Twój wynik: " + to_string(winner.score) + " pkt.";
+                broadcast(r, msg);
+                winner.score = 0;
+            }
             r.gameActive = false;
             r.roundNum = 0;
+            r.cooldownEnd = 0;
             broadcast(r, "Za mało graczy, gra wstrzymana.");
         }
     }
@@ -209,8 +220,8 @@ void handleCommand(int fd, string cmdLine) {
         if (cmd == "NICK") {
             if(arg.empty()) { sendTo(fd, "Musisz podać nick!"); return; }
             // Sprawdź unikalność
-            for(auto const& [k, v] : players) {
-                if(v.nick == arg) { sendTo(fd, "Nick zajęty!"); return; }
+            for(auto const& pair : players) {
+                if(pair.second.nick == arg) { sendTo(fd, "Nick zajęty!"); return; }
             }
             p.nick = arg;
             sendTo(fd, "OK Witaj " + p.nick + ".");
@@ -354,7 +365,11 @@ void handleCommand(int fd, string cmdLine) {
             }
         }
     } else {
-        sendTo(fd, "Gra wstrzymana lub oczekiwanie na graczy.");
+        if (r.cooldownEnd > 0) {
+            sendTo(fd, "Przerwa między rundami. Czekaj...");
+        } else {
+            sendTo(fd, "Gra wstrzymana lub oczekiwanie na graczy.");
+        }
     }
 }
 
@@ -401,12 +416,33 @@ int main(int argc, char ** argv) {
 
         // A. Logika Czasu 
         struct timespec now = getMonotonicTime();
+        time_t nowSec = time(NULL);
         for(auto &pair : rooms) {
             GameRoom &r = pair.second;
+
             if(r.gameActive) {
                 double elapsed = timeDiff(r.startTime, now);
                 if(elapsed >= ROUND_TIME_SEC) {
                     endRound(r, "Czas minął (2 minuty).");
+                }
+            }
+            else if (r.cooldownEnd > 0) {
+                if (nowSec >= r.cooldownEnd) {
+                    r.cooldownEnd = 0;
+                    if(r.members.size() >= 2) {
+                        startRound(r);
+                    } else {
+                        if (!r.members.empty()) {
+                            int winnerFd = r.members[0];
+                            Player &winner = players[winnerFd];
+                            string msg = "Koniec gry! Twój wynik końcowy: " + to_string(winner.score) + " pkt.";
+                            broadcast(r, msg);
+                            winner.score = 0;
+                        }
+                        broadcast(r, "Za mało graczy, gra wstrzymana (reset stanu).");
+                        r.roundNum = 0;
+                        r.gameActive = false;
+                    }
                 }
             }
         }
